@@ -18,6 +18,8 @@ const state = {
     days: [],
     view: 'plan',
     weekStart: null,
+    monthStart: null, // the 1st of the month the calendar is showing
+    calDays: [], // the month grid's days, as the server has them
     picking: null, // { date, slot } while the picker is open
     editing: null, // the meal being edited, or null for a new one
 };
@@ -77,8 +79,42 @@ function weekDates(start) {
     });
 }
 
+/** The 1st of the month containing `d`. */
+function monthStart(d) {
+    const out = new Date(d);
+    out.setHours(0, 0, 0, 0);
+    out.setDate(1);
+    return out;
+}
+
+/**
+ * The days a month grid has to show: whole weeks, from the week containing the
+ * 1st to the week containing the last day.
+ *
+ * Length is computed rather than fixed at six weeks. A 28-day February starting
+ * on the first day of the week needs exactly four, and padding it to six would
+ * add two rows of greyed-out days that belong to neither month.
+ */
+function monthGrid(first) {
+    const start = weekStart(first);
+    const last = new Date(first.getFullYear(), first.getMonth() + 1, 0);
+    const days = Math.round((weekStart(last) - start) / 86_400_000) + 7;
+    return Array.from({ length: days }, (_, i) => {
+        const d = new Date(start);
+        d.setDate(d.getDate() + i);
+        return isoDate(d);
+    });
+}
+
 const fmtDayName = (iso) => parseIso(iso).toLocaleDateString(undefined, { weekday: 'long' });
 const fmtDayShort = (iso) => parseIso(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+
+/** What the stepper reads for a view: a month on the calendar, a week elsewhere. */
+function stepperLabel(view) {
+    return view === 'cal'
+        ? state.monthStart.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })
+        : fmtWeekLabel(state.weekStart);
+}
 
 function fmtWeekLabel(start) {
     const end = new Date(start);
@@ -174,20 +210,52 @@ function setView(view) {
         tab.classList.toggle('is-active', tab.dataset.view === view);
     }
     $('view-plan').hidden = view !== 'plan';
+    $('view-cal').hidden = view !== 'cal';
     $('view-meals').hidden = view !== 'meals';
     $('view-shop').hidden = view !== 'shop';
 
-    // The week stepper only means something where a week does.
-    const weekly = view === 'plan' || view === 'shop';
-    $('weeknav').hidden = !weekly;
-    $('btn-today').hidden = !weekly;
-    $('view-title').textContent = view === 'meals' ? 'Meals' : view === 'shop' ? 'Shopping' : 'Plan';
+    // The stepper steps by a week on the plan and the shopping list, and by a
+    // month on the calendar. Only the meal library has nothing to step through.
+    const stepped = view !== 'meals';
+    $('weeknav').hidden = !stepped;
+    $('btn-today').hidden = !stepped;
+    $('btn-today').textContent = view === 'cal' ? 'This month' : 'Today';
+    $('view-title').textContent =
+        { plan: 'Plan', cal: 'Calendar', meals: 'Meals', shop: 'Shopping' }[view] ?? 'Plan';
+
+    /*
+     * The label is set here, not only by whichever loader runs.
+     *
+     * Going from the calendar to the shopping list used to leave "October 2026"
+     * above a list for one week: loadShopping has no reason to touch the label,
+     * so it kept whatever the calendar had put there. Deciding it from the view
+     * is the only way it cannot disagree with what is on screen.
+     */
+    if (stepped) $('week-label').textContent = stepperLabel(view);
 
     if (view === 'shop') loadShopping();
+    if (view === 'cal') loadCalendar().catch((e) => toast(e.message));
+    // Coming back to the plan from the calendar, where a day may have been
+    // changed: the week on screen could be out of date.
+    if (view === 'plan') loadWeek().catch(() => {});
 }
 
 function mealById(id) {
     return state.meals.find((m) => m.id === id) || null;
+}
+
+/**
+ * What is planned for a date and slot, from whichever view has that date.
+ *
+ * The picker can be opened from the week view or from the calendar's day sheet,
+ * and those hold different ranges -- a date tapped in the calendar is usually
+ * not in the loaded week at all. Asking both is what stops the picker opening
+ * with nothing ticked on a day that clearly has something on it.
+ */
+function plannedAt(date, slot) {
+    const fromWeek = state.days.find((d) => d.date === date)?.slots?.[slot];
+    if (fromWeek) return fromWeek;
+    return state.calDays.find((d) => d.date === date)?.slots?.[slot] ?? null;
 }
 
 function renderDays() {
@@ -303,6 +371,116 @@ function renderMeals() {
     }
 }
 
+// ------------------------------------------------------------ calendar -----
+
+/** One row of weekday initials, in the same order the grid runs. */
+function renderWeekdays() {
+    const host = $('cal-weekdays');
+    if (host.childElementCount) return;
+    const ref = weekStart(new Date());
+    host.innerHTML = '';
+    for (let i = 0; i < 7; i++) {
+        const d = new Date(ref);
+        d.setDate(d.getDate() + i);
+        const cell = document.createElement('span');
+        // Narrow rather than short: "S" twice over is no help at all, and the
+        // locale decides what a sensible abbreviation looks like.
+        cell.textContent = d.toLocaleDateString(undefined, { weekday: 'narrow' });
+        cell.title = d.toLocaleDateString(undefined, { weekday: 'long' });
+        host.append(cell);
+    }
+}
+
+function renderCalendar() {
+    renderWeekdays();
+    const host = $('cal-grid');
+    const today = isoDate(new Date());
+    const month = state.monthStart.getMonth();
+
+    host.innerHTML = '';
+    for (const day of state.calDays) {
+        const date = parseIso(day.date);
+        const cell = document.createElement('button');
+        cell.type = 'button';
+        cell.className = 'cal-day';
+        if (date.getMonth() !== month) cell.classList.add('is-outside');
+        if (day.date === today) cell.classList.add('is-today');
+        cell.dataset.date = day.date;
+        cell.setAttribute(
+            'aria-label',
+            `${parseIso(day.date).toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' })}`,
+        );
+
+        const num = document.createElement('span');
+        num.className = 'cal-num';
+        num.textContent = String(date.getDate());
+        cell.append(num);
+
+        const meals = document.createElement('span');
+        meals.className = 'cal-meals';
+        for (const slot of SLOTS) {
+            const meal = mealById(day.slots[slot]);
+            if (!meal) continue;
+            const row = document.createElement('span');
+            row.className = 'cal-meal';
+            const dot = document.createElement('span');
+            dot.className = `dot ${slot}`;
+            const name = document.createElement('span');
+            name.className = 'name';
+            name.textContent = meal.name;
+            row.append(dot, name);
+            row.title = `${SLOT_LABELS[slot]}: ${meal.name}`;
+            meals.append(row);
+        }
+        cell.append(meals);
+        host.append(cell);
+    }
+}
+
+async function loadCalendar() {
+    const dates = monthGrid(state.monthStart);
+    const { days } = await api(`/api/plan?from=${dates[0]}&to=${dates[dates.length - 1]}`);
+    state.calDays = days;
+    $('week-label').textContent = stepperLabel('cal');
+    renderCalendar();
+}
+
+/** The full names for one date, and a way to change any of them. */
+function openDay(date) {
+    const day = state.calDays.find((d) => d.date === date);
+    $('day-title').textContent = parseIso(date).toLocaleDateString(undefined, {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+    });
+
+    const host = $('day-slots');
+    host.innerHTML = '';
+    for (const slot of SLOTS) {
+        const meal = mealById(day?.slots?.[slot]);
+        const row = document.createElement('button');
+        row.type = 'button';
+        row.className = 'day-slot';
+        row.dataset.date = date;
+        row.dataset.slot = slot;
+
+        const label = document.createElement('span');
+        label.className = 'slot-label';
+        label.textContent = SLOT_LABELS[slot];
+        const value = document.createElement('span');
+        value.className = `slot-meal${meal ? '' : ' is-empty'}`;
+        value.textContent = meal ? meal.name : 'Nothing planned';
+        const chev = document.createElement('span');
+        chev.className = 'slot-chevron';
+        chev.setAttribute('aria-hidden', 'true');
+        chev.textContent = '\u203a';
+
+        row.append(label, value, chev);
+        host.append(row);
+    }
+    $('day').showModal();
+}
+
 // ------------------------------------------------------------- loading -----
 
 async function loadMeals() {
@@ -314,7 +492,7 @@ async function loadWeek() {
     const dates = weekDates(state.weekStart);
     const { days } = await api(`/api/plan?from=${dates[0]}&to=${dates[6]}`);
     state.days = days;
-    $('week-label').textContent = fmtWeekLabel(state.weekStart);
+    $('week-label').textContent = stepperLabel(state.view);
     renderDays();
 }
 
@@ -410,7 +588,7 @@ function toggleTick(text, on) {
 
 function openPicker(date, slot) {
     state.picking = { date, slot };
-    const current = state.days.find((d) => d.date === date)?.slots[slot] || null;
+    const current = plannedAt(date, slot);
     $('picker-title').textContent = `${SLOT_LABELS[slot]} · ${fmtDayName(date)}`;
     $('picker-search').value = '';
     renderPicker(current);
@@ -461,7 +639,10 @@ async function pick(mealId) {
     $('picker').close();
     try {
         await api('/api/plan', { method: 'PUT', body: { date, slot, mealId } });
-        await loadWeek();
+        // Whichever view is on screen is the one that has to be right. The other
+        // reloads when it is next opened, so there is nothing to keep in step.
+        if (state.view === 'cal') await loadCalendar();
+        else await loadWeek();
     } catch (e) {
         toast(e.message);
     }
@@ -602,9 +783,20 @@ async function clearWeek() {
 
 // --------------------------------------------------------------- wiring ----
 
-function shiftWeek(days) {
+/** Steps whichever period the current view is showing. */
+function step(dir) {
+    if (state.view === 'cal') {
+        const next = new Date(state.monthStart);
+        // Set the day first: stepping from the 31st into a 30-day month would
+        // otherwise roll over into the one after it.
+        next.setDate(1);
+        next.setMonth(next.getMonth() + dir);
+        state.monthStart = next;
+        loadCalendar().catch((e) => toast(e.message));
+        return;
+    }
     const next = new Date(state.weekStart);
-    next.setDate(next.getDate() + days);
+    next.setDate(next.getDate() + dir * 7);
     state.weekStart = next;
     loadWeek().then(() => { if (state.view === 'shop') loadShopping(); });
 }
@@ -615,9 +807,14 @@ for (const tab of document.querySelectorAll('.tab')) {
     tab.addEventListener('click', () => setView(tab.dataset.view));
 }
 
-$('week-prev').addEventListener('click', () => shiftWeek(-7));
-$('week-next').addEventListener('click', () => shiftWeek(7));
+$('week-prev').addEventListener('click', () => step(-1));
+$('week-next').addEventListener('click', () => step(1));
 $('btn-today').addEventListener('click', () => {
+    if (state.view === 'cal') {
+        state.monthStart = monthStart(new Date());
+        loadCalendar().catch((e) => toast(e.message));
+        return;
+    }
     state.weekStart = weekStart(new Date());
     loadWeek().then(() => { if (state.view === 'shop') loadShopping(); });
 });
@@ -634,6 +831,22 @@ $('meal-list').addEventListener('click', (e) => {
     if (card) openEditor(mealById(card.dataset.meal));
 });
 
+$('cal-grid').addEventListener('click', (e) => {
+    const cell = e.target.closest('.cal-day');
+    if (cell) openDay(cell.dataset.date);
+});
+
+// The day sheet closes before the picker opens: two stacked modals on a phone
+// leave no room for either, and coming back to the sheet afterwards would show
+// the value it was opened with rather than the one just chosen.
+$('day-slots').addEventListener('click', (e) => {
+    const row = e.target.closest('.day-slot');
+    if (!row) return;
+    $('day').close();
+    openPicker(row.dataset.date, row.dataset.slot);
+});
+$('day-close').addEventListener('click', () => $('day').close());
+
 $('meal-search').addEventListener('input', renderMeals);
 $('btn-add-meal').addEventListener('click', () => openEditor(null));
 
@@ -643,7 +856,7 @@ $('picker-list').addEventListener('click', (e) => {
 });
 $('picker-search').addEventListener('input', () => {
     const { date, slot } = state.picking;
-    renderPicker(state.days.find((d) => d.date === date)?.slots[slot] || null);
+    renderPicker(plannedAt(date, slot));
 });
 $('picker-clear').addEventListener('click', () => pick(null));
 $('picker-close').addEventListener('click', () => $('picker').close());
@@ -661,6 +874,7 @@ $('randomer-close').addEventListener('click', () => $('randomer').close());
 
 (async function boot() {
     state.weekStart = weekStart(new Date());
+    state.monthStart = monthStart(new Date());
     try {
         const session = await fetch('/api/session').then((r) => r.json());
         if (session.passwordUnusable) {
