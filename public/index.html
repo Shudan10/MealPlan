@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<!-- viewport-fit=cover lets the page reach under the notch and the home
+     indicator; the safe-area insets in the stylesheet put the content back
+     where it can actually be read. -->
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Meal Plan</title>
+<meta name="description" content="What the family is eating this week.">
+
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="stylesheet" href="style.css">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="icon" href="icons/icon-192.png" sizes="192x192">
+
+<!-- iOS still reads these rather than the manifest for standalone mode. -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Meal Plan">
+<meta name="theme-color" content="#0b1b3a">
+</head>
+<body>
+
+<!-- ------------------------------------------------------------- sign in -->
+<!-- Shown in place of everything else until there is a session. Not a dialog:
+     a modal over an empty app is a modal over nothing, and on iOS a <dialog>
+     that opens before the first paint sometimes opens without its backdrop. -->
+<div id="gate" class="gate" hidden>
+  <form id="gate-form" class="gate-card">
+    <img class="gate-mark" src="icons/icon-192.png" alt="" width="54" height="54">
+    <h1>Meal Plan</h1>
+    <p class="muted">Ask whoever set this up for the family password.</p>
+    <label class="sr-only" for="gate-password">Password</label>
+    <input id="gate-password" type="password" autocomplete="current-password" placeholder="Password" enterkeyhint="go">
+    <p class="error" id="gate-error" hidden></p>
+    <button class="primary big" id="gate-submit" type="submit">Sign in</button>
+  </form>
+</div>
+
+<!-- ----------------------------------------------------------------- app -->
+<div id="app" hidden>
+
+  <header class="topbar">
+    <div class="topbar-row">
+      <h1 id="view-title">This week</h1>
+      <button class="icon-btn" id="btn-today" title="Jump to this week" hidden>Today</button>
+    </div>
+
+    <!-- Week stepper. Only on the plan and shopping views, which are the two
+         that mean something relative to a particular week. -->
+    <div class="weeknav" id="weeknav" hidden>
+      <button class="icon-btn" id="week-prev" aria-label="Previous week">&#8249;</button>
+      <span id="week-label">&nbsp;</span>
+      <button class="icon-btn" id="week-next" aria-label="Next week">&#8250;</button>
+    </div>
+  </header>
+
+  <main>
+    <!-- ------------------------------------------------------- plan view -->
+    <section id="view-plan" class="view">
+      <div class="actions">
+        <button class="primary" id="btn-random">
+          <svg class="btn-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/></svg>
+          Random week
+        </button>
+        <button class="ghost" id="btn-clear">Clear week</button>
+      </div>
+      <div id="days"></div>
+    </section>
+
+    <!-- ------------------------------------------------------ meals view -->
+    <section id="view-meals" class="view" hidden>
+      <div class="actions">
+        <input id="meal-search" type="search" placeholder="Search meals" enterkeyhint="search" autocomplete="off">
+        <button class="primary" id="btn-add-meal" aria-label="Add a meal">+</button>
+      </div>
+      <p class="hint" id="meals-count"></p>
+      <div id="meal-list"></div>
+    </section>
+
+    <!-- --------------------------------------------------- shopping view -->
+    <section id="view-shop" class="view" hidden>
+      <p class="hint" id="shop-hint"></p>
+      <div id="shop-list"></div>
+    </section>
+  </main>
+
+  <!-- Bottom bar rather than top tabs: this is a phone app, and the bottom of
+       a 6.1" screen is the part a thumb reaches without re-gripping. -->
+  <nav class="tabbar">
+    <button class="tab is-active" data-view="plan">
+      <svg class="tab-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4.5" width="18" height="16" rx="2.5"/><path d="M8 2.5v4M16 2.5v4M3 9.5h18"/></svg><span>Plan</span>
+    </button>
+    <button class="tab" data-view="meals">
+      <svg class="tab-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01"/></svg><span>Meals</span>
+    </button>
+    <button class="tab" data-view="shop">
+      <svg class="tab-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5.5 8h13l-1.2 11.2a2 2 0 0 1-2 1.8H8.7a2 2 0 0 1-2-1.8z"/><path d="M9 8V5.5a3 3 0 0 1 6 0V8"/></svg><span>Shopping</span>
+    </button>
+  </nav>
+</div>
+
+<!-- ------------------------------------------------------- meal picker -->
+<dialog id="picker" aria-labelledby="picker-title">
+  <div class="sheet">
+    <div class="sheet-head">
+      <h3 id="picker-title">Choose a meal</h3>
+      <button class="dialog-close" id="picker-close" aria-label="Close">&times;</button>
+    </div>
+    <input id="picker-search" type="search" placeholder="Search" autocomplete="off">
+    <div id="picker-list" class="picker-list"></div>
+    <div class="sheet-actions">
+      <button class="ghost danger" id="picker-clear">Leave empty</button>
+    </div>
+  </div>
+</dialog>
+
+<!-- --------------------------------------------------------- meal editor -->
+<dialog id="editor" aria-labelledby="editor-title">
+  <form class="sheet" id="editor-form" method="dialog">
+    <div class="sheet-head">
+      <h3 id="editor-title">New meal</h3>
+      <button class="dialog-close" id="editor-close" type="button" aria-label="Close">&times;</button>
+    </div>
+
+    <label>Name
+      <input id="ed-name" required maxlength="120" placeholder="Tacos" enterkeyhint="next">
+    </label>
+
+    <fieldset class="slots">
+      <legend>Served at</legend>
+      <label class="chip"><input type="checkbox" value="breakfast" class="ed-slot"><span>Breakfast</span></label>
+      <label class="chip"><input type="checkbox" value="lunch" class="ed-slot"><span>Lunch</span></label>
+      <label class="chip"><input type="checkbox" value="dinner" class="ed-slot" checked><span>Dinner</span></label>
+    </fieldset>
+
+    <div class="row">
+      <label>Serves <input id="ed-serves" type="number" min="1" max="99" inputmode="numeric" placeholder="4"></label>
+      <label>Tags <input id="ed-tags" placeholder="quick, favourite" autocomplete="off"></label>
+    </div>
+
+    <label>Ingredients <span class="muted">one per line</span>
+      <textarea id="ed-ingredients" rows="5" placeholder="500g mince&#10;Tortillas&#10;Cheese"></textarea>
+    </label>
+
+    <label>Method <span class="muted">one step per line</span>
+      <textarea id="ed-method" rows="5" placeholder="Brown the mince&#10;Warm the tortillas"></textarea>
+    </label>
+
+    <label>Notes
+      <textarea id="ed-notes" rows="2" placeholder="Kids like it without the salsa"></textarea>
+    </label>
+
+    <p class="error" id="editor-error" hidden></p>
+
+    <div class="sheet-actions">
+      <button class="ghost danger" id="ed-delete" type="button" hidden>Delete</button>
+      <span class="spacer"></span>
+      <button class="primary" id="ed-save" type="submit">Save</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- --------------------------------------------------------- random sheet -->
+<dialog id="randomer" aria-labelledby="randomer-title">
+  <form class="sheet" id="randomer-form" method="dialog">
+    <div class="sheet-head">
+      <h3 id="randomer-title">Random week</h3>
+      <button class="dialog-close" id="randomer-close" type="button" aria-label="Close">&times;</button>
+    </div>
+    <p class="muted" id="randomer-range"></p>
+
+    <fieldset class="slots">
+      <legend>Fill which meals</legend>
+      <label class="chip"><input type="checkbox" value="breakfast" class="rn-slot"><span>Breakfast</span></label>
+      <label class="chip"><input type="checkbox" value="lunch" class="rn-slot"><span>Lunch</span></label>
+      <label class="chip"><input type="checkbox" value="dinner" class="rn-slot" checked><span>Dinner</span></label>
+    </fieldset>
+
+    <label class="check"><input type="checkbox" id="rn-overwrite"> Replace meals already planned</label>
+    <label class="check"><input type="checkbox" id="rn-norepeat" checked> Avoid repeats in the same week</label>
+
+    <p class="error" id="randomer-error" hidden></p>
+    <div class="sheet-actions">
+      <span class="spacer"></span>
+      <button class="primary" type="submit">Fill it in</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- Confirmations, asked by the app rather than by the browser's own box. -->
+<dialog id="confirm" aria-labelledby="confirm-title">
+  <form class="sheet" id="confirm-form" method="dialog">
+    <div class="sheet-head">
+      <h3 id="confirm-title">Are you sure?</h3>
+      <button class="dialog-close" id="confirm-x" type="button" aria-label="Close">&times;</button>
+    </div>
+    <p class="muted" id="confirm-body"></p>
+    <div class="sheet-actions">
+      <span class="spacer"></span>
+      <button class="ghost" id="confirm-no" type="button">Cancel</button>
+      <button class="primary" id="confirm-yes" value="ok" type="submit">OK</button>
+    </div>
+  </form>
+</dialog>
+
+<div id="toast" class="toast" hidden></div>
+
+<script src="app.js"></script>
+</body>
+</html>

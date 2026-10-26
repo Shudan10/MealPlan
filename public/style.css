@@ -1,0 +1,527 @@
+/*
+ * Meal Plan -- a blue, phone-first theme.
+ *
+ * Built for a 390pt iPhone screen first and allowed to grow on a desktop,
+ * rather than the other way round: the only place this app is really used is
+ * standing in a kitchen holding a phone.
+ */
+
+:root {
+    color-scheme: light dark;
+
+    --blue-600: #1d4ed8;
+    --blue-500: #2563eb;
+    --blue-400: #3b82f6;
+    --blue-300: #60a5fa;
+
+    --bg: #f4f7fd;
+    --bg-grad: radial-gradient(1200px 600px at 50% -200px, #dbe8ff 0%, transparent 70%);
+    --panel: #ffffff;
+    --panel-2: #eef3fc;
+    --line: #d8e2f4;
+    --text: #0d1b35;
+    --muted: #5b6b8c;
+    --accent: var(--blue-500);
+    --accent-dim: var(--blue-300);
+    --on-accent: #ffffff;
+    --danger: #c0372b;
+    --shadow: 0 1px 2px rgba(13, 27, 53, 0.06), 0 8px 24px rgba(13, 27, 53, 0.08);
+    --radius: 16px;
+    --radius-sm: 11px;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --bg: #070e1f;
+        --bg-grad: radial-gradient(1200px 600px at 50% -240px, #12275a 0%, transparent 70%);
+        --panel: #0f1a33;
+        --panel-2: #152445;
+        --line: #22365f;
+        --text: #e8efff;
+        --muted: #91a4c8;
+        --accent: var(--blue-400);
+        --accent-dim: #27406e;
+        --on-accent: #06142e;
+        --danger: #ff6b62;
+        --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 10px 30px rgba(0, 0, 0, 0.45);
+    }
+}
+
+* { box-sizing: border-box; }
+
+/*
+ * `hidden` has to win.
+ *
+ * The UA stylesheet's [hidden] { display: none } is an attribute selector, so
+ * any class rule here that sets display -- .gate being grid, .weeknav being
+ * flex -- outranks it and the element stays on screen while the code believes
+ * it is hidden. That showed up as the sign-in card sitting on top of the app
+ * after a successful sign-in.
+ */
+[hidden] { display: none !important; }
+
+html, body {
+    margin: 0;
+    padding: 0;
+    /* Stops the whole page rubber-banding away from the status bar, which in
+       standalone mode looks like the app coming unstuck from the phone. */
+    overscroll-behavior-y: none;
+}
+
+body {
+    background: var(--bg-grad), var(--bg);
+    background-attachment: fixed;
+    color: var(--text);
+    font: 15px/1.45 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    min-height: 100dvh;
+}
+
+h1, h2, h3 { margin: 0; font-weight: 650; letter-spacing: -0.015em; }
+h1 { font-size: 22px; }
+h3 { font-size: 17px; }
+
+.muted { color: var(--muted); }
+.hint { color: var(--muted); font-size: 13px; margin: 0 0 10px; }
+.error { color: var(--danger); font-size: 14px; margin: 4px 0 0; }
+.spacer { flex: 1; }
+.sr-only {
+    position: absolute; width: 1px; height: 1px; overflow: hidden;
+    clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap;
+}
+
+/* ------------------------------------------------------------- controls -- */
+
+button {
+    font: inherit;
+    font-weight: 560;
+    color: var(--text);
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    padding: 9px 15px;
+    cursor: pointer;
+    transition: transform 0.12s ease, border-color 0.15s ease, background 0.15s ease;
+}
+button:active:not(:disabled) { transform: scale(0.97); }
+button:disabled { opacity: 0.45; cursor: not-allowed; }
+
+button.primary {
+    background: linear-gradient(180deg, var(--blue-400), var(--blue-600));
+    border-color: var(--blue-600);
+    color: #fff;
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.2) inset, 0 6px 16px rgba(37, 99, 235, 0.3);
+}
+button.ghost { background: transparent; }
+button.danger, button.ghost.danger { color: var(--danger); border-color: transparent; }
+button.big { padding: 13px 20px; font-size: 16px; width: 100%; }
+
+.icon-btn {
+    background: transparent;
+    border-color: transparent;
+    color: var(--accent);
+    padding: 6px 10px;
+    font-size: 17px;
+}
+
+/* Checkboxes are excluded deliberately. The appearance reset below is for
+   text fields; applied to a checkbox it removes the tick along with the
+   chrome, so a checked box renders identically to an unchecked one -- the
+   state is right and invisible, which is the worst of both. */
+input:not([type="checkbox"]):not([type="radio"]), select, textarea {
+    font: inherit;
+    /* 16px is not a style choice: Safari zooms the page when a focused field is
+       smaller than that and does not zoom back out, which leaves the app
+       scrolled sideways and stuck after one tap on a number. */
+    font-size: 16px;
+    color: var(--text);
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    padding: 11px 13px;
+    width: 100%;
+    -webkit-appearance: none;
+    appearance: none;
+}
+input:focus-visible, textarea:focus-visible, select:focus-visible, button:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+}
+textarea { resize: vertical; line-height: 1.5; }
+
+/*
+ * Drawn rather than native.
+ *
+ * A native checkbox on a dark background renders as a pale khaki square that
+ * belongs to no part of this theme. Appearance is reset here -- but unlike the
+ * text-field reset above, the tick is then drawn back, which is the whole
+ * difference between styling a control and erasing it.
+ */
+input[type="checkbox"], input[type="radio"] {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 22px;
+    height: 22px;
+    flex: 0 0 auto;
+    margin: 0;
+    border: 1.5px solid var(--line);
+    border-radius: 7px;
+    background: var(--panel-2);
+    display: inline-grid;
+    place-content: center;
+    cursor: pointer;
+    transition: background 0.14s ease, border-color 0.14s ease;
+}
+input[type="radio"] { border-radius: 50%; }
+
+input[type="checkbox"]::before,
+input[type="radio"]::before {
+    content: "";
+    width: 12px;
+    height: 12px;
+    transform: scale(0);
+    transition: transform 0.14s cubic-bezier(0.3, 1.4, 0.6, 1);
+    background: #fff;
+    clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 85% 0%, 46% 70%);
+}
+input[type="radio"]::before { clip-path: none; border-radius: 50%; width: 9px; height: 9px; }
+
+input[type="checkbox"]:checked, input[type="radio"]:checked {
+    background: var(--accent);
+    border-color: var(--accent);
+}
+input[type="checkbox"]:checked::before,
+input[type="radio"]:checked::before { transform: scale(1); }
+
+label { display: block; color: var(--muted); font-size: 13px; font-weight: 560; margin-bottom: 12px; }
+label input, label textarea, label select { margin-top: 5px; color: var(--text); }
+label.check { display: flex; align-items: center; gap: 10px; font-size: 15px; color: var(--text); }
+label.check input { width: auto; margin: 0; }
+
+.row { display: flex; gap: 10px; }
+.row > label { flex: 1; }
+
+/* Slot chips: a checkbox that reads as a pill rather than a tick box. */
+.slots { border: 0; padding: 0; margin: 0 0 14px; display: flex; flex-wrap: wrap; gap: 8px; }
+.slots legend { color: var(--muted); font-size: 13px; font-weight: 560; padding: 0 0 7px; }
+.chip { margin: 0; }
+.chip input { position: absolute; opacity: 0; pointer-events: none; }
+.chip span {
+    display: inline-block;
+    padding: 8px 14px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: var(--panel);
+    color: var(--muted);
+    font-size: 14px;
+}
+.chip input:checked + span {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--on-accent);
+}
+.chip input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* ------------------------------------------------------------- sign in --- */
+
+.gate {
+    min-height: 100dvh;
+    display: grid;
+    place-items: center;
+    padding: 24px max(16px, env(safe-area-inset-right)) 24px max(16px, env(safe-area-inset-left));
+}
+.gate-card {
+    width: min(380px, 100%);
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 22px;
+    box-shadow: var(--shadow);
+    padding: 28px 22px;
+    text-align: center;
+}
+.gate-card h1 { margin-bottom: 6px; }
+.gate-card p { margin: 0 0 18px; font-size: 14px; }
+.gate-card input { text-align: center; margin-bottom: 14px; }
+.gate-mark {
+    width: 54px;
+    height: 54px;
+    margin: 0 auto 14px;
+    display: block;
+    border-radius: 16px;
+    box-shadow: 0 8px 20px rgba(37, 99, 235, 0.35);
+}
+
+/* ------------------------------------------------------------- chrome ---- */
+
+.topbar {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    padding: max(10px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) 10px max(16px, env(safe-area-inset-left));
+    background: color-mix(in srgb, var(--bg) 82%, transparent);
+    backdrop-filter: saturate(160%) blur(14px);
+    -webkit-backdrop-filter: saturate(160%) blur(14px);
+    border-bottom: 1px solid var(--line);
+}
+.topbar-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 34px; }
+
+.weeknav { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 6px; }
+.weeknav span { font-size: 14px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.weeknav .icon-btn { font-size: 22px; line-height: 1; padding: 2px 14px; }
+
+main {
+    padding: 14px max(16px, env(safe-area-inset-right)) 0 max(16px, env(safe-area-inset-left));
+    /* Clears the fixed tab bar plus the home indicator below it. */
+    padding-bottom: calc(76px + env(safe-area-inset-bottom));
+    max-width: 720px;
+    margin: 0 auto;
+}
+
+.actions { display: flex; gap: 10px; align-items: center; margin-bottom: 14px; }
+.actions input[type="search"] { flex: 1; }
+#btn-add-meal { font-size: 22px; line-height: 1; padding: 9px 17px; }
+#btn-random { display: inline-flex; align-items: center; }
+
+.tabbar {
+    position: fixed;
+    left: 0; right: 0; bottom: 0;
+    z-index: 30;
+    display: flex;
+    padding: 6px max(8px, env(safe-area-inset-right)) calc(6px + env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
+    background: color-mix(in srgb, var(--panel) 88%, transparent);
+    backdrop-filter: saturate(160%) blur(16px);
+    -webkit-backdrop-filter: saturate(160%) blur(16px);
+    border-top: 1px solid var(--line);
+}
+.tab {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    background: none;
+    border: 0;
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 600;
+    padding: 6px 0;
+    min-height: 48px;
+}
+.tab .tab-icon { width: 21px; height: 21px; display: block; }
+.btn-icon { width: 16px; height: 16px; vertical-align: -3px; margin-right: 5px; }
+.tab.is-active { color: var(--accent); }
+
+/* ---------------------------------------------------------- plan view ---- */
+
+.day {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    margin-bottom: 12px;
+    overflow: hidden;
+}
+.day-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    padding: 12px 15px 9px;
+    border-bottom: 1px solid var(--line);
+}
+.day-name { font-weight: 650; font-size: 15px; }
+.day-date { color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; }
+.day.is-today { border-color: var(--accent); }
+.day.is-today .day-name { color: var(--accent); }
+.day.is-today .day-head { background: color-mix(in srgb, var(--accent) 8%, transparent); }
+
+.slot-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    background: none;
+    border: 0;
+    border-top: 1px solid var(--line);
+    border-radius: 0;
+    padding: 12px 15px;
+    text-align: left;
+    min-height: 52px;
+}
+.slot-row:first-of-type { border-top: 0; }
+.slot-row:active { background: var(--panel-2); transform: none; }
+.slot-label {
+    flex: 0 0 74px;
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 650;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+.slot-meal { flex: 1; font-weight: 560; }
+.slot-meal.is-empty { color: var(--muted); font-weight: 450; }
+.slot-chevron { color: var(--accent-dim); font-size: 18px; }
+
+/* --------------------------------------------------------- meals view ---- */
+
+.meal-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    text-align: left;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    box-shadow: var(--shadow);
+    padding: 13px 15px;
+    margin-bottom: 9px;
+    min-height: 56px;
+}
+.meal-main { flex: 1; min-width: 0; }
+.meal-name { font-weight: 600; }
+.meal-sub { color: var(--muted); font-size: 12.5px; margin-top: 2px; }
+.meal-slots { display: flex; gap: 4px; flex-shrink: 0; }
+.pill {
+    font-size: 10.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 3px 7px;
+    border-radius: 999px;
+    background: var(--panel-2);
+    color: var(--muted);
+}
+.pill.breakfast { background: color-mix(in srgb, #f59e0b 18%, transparent); color: #b45309; }
+.pill.lunch { background: color-mix(in srgb, #10b981 18%, transparent); color: #047857; }
+.pill.dinner { background: color-mix(in srgb, var(--blue-400) 20%, transparent); color: var(--blue-600); }
+@media (prefers-color-scheme: dark) {
+    .pill.breakfast { color: #fbbf24; }
+    .pill.lunch { color: #34d399; }
+    .pill.dinner { color: var(--blue-300); }
+}
+
+/* ------------------------------------------------------ shopping view ---- */
+
+.shop-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    padding: 12px 14px;
+    margin-bottom: 8px;
+    min-height: 48px;
+}
+.shop-item input { margin-top: 1px; }
+.shop-text { flex: 1; }
+.shop-item.is-done .shop-text { text-decoration: line-through; color: var(--muted); }
+.shop-for { display: block; color: var(--muted); font-size: 12px; margin-top: 2px; }
+.shop-count {
+    flex: 0 0 auto;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 12%, transparent);
+    border-radius: 999px;
+    padding: 2px 8px;
+}
+
+/* ------------------------------------------------------------- empties --- */
+
+.empty {
+    text-align: center;
+    color: var(--muted);
+    padding: 44px 20px;
+    border: 1px dashed var(--line);
+    border-radius: var(--radius);
+    background: color-mix(in srgb, var(--panel) 50%, transparent);
+}
+.empty strong { display: block; color: var(--text); margin-bottom: 5px; font-size: 16px; }
+
+/* ------------------------------------------------------------- dialogs --- */
+
+dialog {
+    border: 0;
+    padding: 0;
+    background: transparent;
+    width: min(460px, 100%);
+    max-width: 100%;
+    max-height: 92dvh;
+    /* Bottom sheet on a phone, which is where a thumb is. */
+    margin: auto auto 0;
+}
+dialog::backdrop { background: rgba(4, 10, 24, 0.55); backdrop-filter: blur(3px); }
+
+.sheet {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 22px 22px 0 0;
+    padding: 18px max(16px, env(safe-area-inset-right)) calc(16px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+    max-height: 92dvh;
+    overflow-y: auto;
+}
+.sheet-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+.sheet-actions { display: flex; align-items: center; gap: 10px; margin-top: 16px; }
+.dialog-close {
+    background: none;
+    border: 0;
+    color: var(--muted);
+    font-size: 26px;
+    line-height: 1;
+    padding: 0 6px;
+    margin: -4px -4px 0 0;
+}
+
+.picker-list { margin-top: 12px; max-height: 52dvh; overflow-y: auto; }
+.picker-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    width: 100%;
+    text-align: left;
+    background: none;
+    border: 0;
+    border-bottom: 1px solid var(--line);
+    border-radius: 0;
+    padding: 13px 4px;
+    min-height: 50px;
+}
+.picker-row:active { background: var(--panel-2); transform: none; }
+.picker-row.is-current { color: var(--accent); }
+
+@media (min-width: 560px) {
+    dialog { margin: auto; }
+    .sheet { border-radius: 22px; padding-bottom: 18px; }
+}
+
+/* --------------------------------------------------------------- toast --- */
+
+.toast {
+    position: fixed;
+    left: 50%;
+    bottom: calc(86px + env(safe-area-inset-bottom));
+    transform: translateX(-50%);
+    z-index: 60;
+    background: var(--text);
+    color: var(--bg);
+    font-size: 14px;
+    font-weight: 560;
+    padding: 10px 18px;
+    border-radius: 999px;
+    box-shadow: var(--shadow);
+    max-width: calc(100% - 32px);
+    text-align: center;
+}
+
+/* Touch screens get bigger targets, and hover effects that would otherwise
+   stick after a tap are turned off. */
+@media (pointer: coarse) {
+    button, .tab, .slot-row, .meal-card { min-height: 44px; }
+    button:hover:not(:disabled) { border-color: var(--line); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; animation: none !important; }
+}
