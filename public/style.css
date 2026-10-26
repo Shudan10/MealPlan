@@ -463,15 +463,15 @@ main {
 .dot.lunch, .key-dot.lunch { background: #10b981; }
 .dot.dinner, .key-dot.dinner { background: var(--blue-400); }
 
-.cal-key { display: flex; align-items: center; gap: 6px; margin-top: 12px; flex-wrap: wrap; }
+.cal-key { display: flex; align-items: center; gap: 14px; margin-top: 12px; flex-wrap: wrap; }
+.key-item { display: inline-flex; align-items: center; gap: 6px; }
 .key-dot {
     width: 7px;
     height: 7px;
     border-radius: 50%;
     display: inline-block;
-    margin-left: 8px;
+    flex: 0 0 auto;
 }
-.cal-key .key-dot:first-child { margin-left: 0; }
 
 /* Phones are too narrow for a name inside a 48px cell: the dots alone say which
    meals of the day are planned, and tapping the date gives the names. */
@@ -625,4 +625,184 @@ dialog::backdrop { background: rgba(4, 10, 24, 0.55); backdrop-filter: blur(3px)
 
 @media (prefers-reduced-motion: reduce) {
     * { transition: none !important; animation: none !important; }
+}
+
+/* ===========================================================================
+   Landscape tablets — the way this is actually used.
+   ===========================================================================
+   A phone is tall and narrow, so the dock sits at the bottom and everything
+   is one column. An iPad held sideways is the opposite: about 1180x820 of
+   which the height is the scarce part. So the dock becomes a rail down the
+   left (vertical space back), the 720px cap comes off (horizontal space
+   used), and the lists that were one column become two or three.
+
+   900px rather than 768px: an iPad held upright is 810-834 wide and is still
+   better served by the phone layout. This is the landscape breakpoint. */
+
+@media (min-width: 900px) {
+    #app {
+        display: flex;
+        align-items: stretch;
+        min-height: 100dvh;
+    }
+
+    .content {
+        flex: 1;
+        min-width: 0;
+        /* A column of fixed header and scrolling body, so a view can ask to be
+           exactly the height of the screen rather than guessing at it with a
+           calc full of magic numbers. */
+        display: flex;
+        flex-direction: column;
+        height: 100dvh;
+    }
+
+    /* --- the dock becomes a rail --- */
+    .tabbar {
+        /* The nav comes after the content in the markup, because on a phone it
+           is a fixed dock where source order does not matter and putting it
+           last keeps the reading order sensible for a screen reader. In this
+           flex row it would land on the right, so it is pulled back. */
+        order: -1;
+        position: sticky;
+        top: 0;
+        left: auto;
+        right: auto;
+        bottom: auto;
+        align-self: flex-start;
+        flex: 0 0 210px;
+        width: 210px;
+        height: 100dvh;
+        flex-direction: column;
+        gap: 4px;
+        padding: 20px 12px calc(16px + env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+        border-top: 0;
+        border-right: 1px solid var(--line);
+        overflow-y: auto;
+    }
+    .tab {
+        flex: 0 0 auto;
+        flex-direction: row;
+        justify-content: flex-start;
+        gap: 12px;
+        height: 46px;
+        min-height: 46px;
+        padding: 0 14px;
+        font-size: 14.5px;
+        border-radius: 11px;
+    }
+    .tab .tab-icon { font-size: inherit; }
+    .tab .tab-icon, .tab svg { width: 20px; height: 20px; }
+    .tab.is-active { background: color-mix(in srgb, var(--accent) 14%, transparent); }
+
+    /* --- the content column --- */
+    main {
+        flex: 1;
+        min-height: 0;
+        overflow-y: auto;
+        max-width: 1180px;
+        margin: 0;
+        padding: 18px 26px 32px;
+    }
+    .topbar { padding-inline: 26px; }
+    .topbar-row { min-height: 40px; }
+
+    /* The week stepper has room to sit beside the title rather than under it. */
+    .topbar { display: flex; align-items: center; gap: 24px; }
+    .topbar-row { flex: 1; }
+    .weeknav { margin-top: 0; min-width: 260px; }
+
+    /* Nothing is behind a dock any more, so the toast comes back down. */
+    .toast { bottom: 26px; }
+
+    /* --- the key moves to the left of the month and stays put ---
+       Asked for so it is readable while scanning the grid, rather than being
+       a footnote underneath that scrolls away. */
+    #view-cal {
+        display: grid;
+        grid-template-columns: 138px minmax(0, 1fr);
+        grid-template-areas:
+            "key weekdays"
+            "key grid";
+        column-gap: 18px;
+        align-items: start;
+        /* The weekday strip takes what it needs; the month takes the rest of
+           the screen. A month with six rows and one with five then both fill
+           it, instead of five rows leaving a third of the screen empty. */
+        grid-template-rows: auto minmax(0, 1fr);
+        min-height: 100%;
+    }
+    #cal-weekdays { grid-area: weekdays; }
+    /* align-items: start above keeps the key a compact card at the top of its
+       column; the month has to opt back in to filling its row. */
+    #cal-grid { grid-area: grid; align-self: stretch; }
+    .cal-key {
+        grid-area: key;
+        position: sticky;
+        top: 14px;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+        margin: 0;
+        padding: 15px 16px;
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        box-shadow: var(--shadow);
+        font-size: 13.5px;
+    }
+    .cal-key .key-dot { width: 9px; height: 9px; }
+
+    /* Wider than tall here: six rows of a square cell do not fit in 820px of
+       landscape, and the cells only need enough height for three meal names. */
+    .cal-grid {
+        gap: 6px;
+        /* Rows share the height instead of each being a fixed shape. The floor
+           keeps a six-row month readable on the shortest landscape screen. */
+        grid-auto-rows: minmax(74px, 1fr);
+        min-height: 0;
+    }
+    .cal-weekdays { gap: 6px; }
+    .cal-day { aspect-ratio: auto; padding: 7px 7px 6px; border-radius: 12px; }
+    .cal-num { font-size: 13px; }
+    .cal-meal .name { font-size: 11px; line-height: 1.3; }
+    .cal-meal .dot { width: 6px; height: 6px; }
+    .cal-meals { gap: 3px; }
+
+    /* --- lists use the width instead of running off the bottom --- */
+    #days {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 14px;
+        align-items: start;
+    }
+    #days .day { margin-bottom: 0; }
+
+    #meal-list {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+    }
+    #meal-list .meal-card { margin-bottom: 0; }
+    #meal-list .empty { grid-column: 1 / -1; }
+
+    #shop-list {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 9px;
+        align-items: start;
+    }
+    #shop-list .shop-item { margin-bottom: 0; }
+    #shop-list .empty { grid-column: 1 / -1; }
+
+    /* The day sheet is a side panel's worth of content; on a landscape screen
+       a bottom sheet would cover the month it is describing. */
+    #day { margin: auto; }
+    #day .sheet { border-radius: 22px; }
+}
+
+/* A 12.9" iPad, or any desktop: a third column earns its place. */
+@media (min-width: 1280px) {
+    #days, #meal-list { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    main { padding-inline: 32px; }
 }

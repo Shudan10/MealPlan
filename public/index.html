@@ -41,6 +41,11 @@
 <!-- ----------------------------------------------------------------- app -->
 <div id="app" hidden>
 
+  <!-- Everything except the navigation. On a landscape iPad the nav becomes a
+       rail down the left and this is the column beside it; on a phone the nav
+       is the dock at the bottom and this is simply the whole screen. -->
+  <div class="content">
+
   <header class="topbar">
     <div class="topbar-row">
       <h1 id="view-title">This week</h1>
@@ -73,10 +78,13 @@
     <section id="view-cal" class="view" hidden>
       <div class="cal-weekdays" id="cal-weekdays" aria-hidden="true"></div>
       <div class="cal-grid" id="cal-grid" role="grid" aria-label="Month of meals"></div>
+      <!-- Each entry is one element rather than a loose dot beside a bare text
+           node, so the key can stack into a column on a wide screen without the
+           dots coming apart from their words. -->
       <p class="hint cal-key">
-        <span class="key-dot breakfast"></span> Breakfast
-        <span class="key-dot lunch"></span> Lunch
-        <span class="key-dot dinner"></span> Dinner
+        <span class="key-item"><span class="key-dot breakfast"></span>Breakfast</span>
+        <span class="key-item"><span class="key-dot lunch"></span>Lunch</span>
+        <span class="key-item"><span class="key-dot dinner"></span>Dinner</span>
       </p>
     </section>
 
@@ -96,6 +104,8 @@
       <div id="shop-list"></div>
     </section>
   </main>
+
+  </div><!-- /.content -->
 
   <!-- Bottom bar rather than top tabs: this is a phone app, and the bottom of
        a 6.1" screen is the part a thumb reaches without re-gripping. -->
