@@ -17,6 +17,13 @@ Built to be used on a phone, standing in a kitchen.
 - **Random week.** Fills the slots you choose. It draws without replacement, so
   a week does not come back as the same dinner four times, and by default it
   only fills blanks — if you have already decided on Friday, Friday is kept.
+  Saturday and Sunday can be left out, for households that eat differently at
+  the weekend.
+- **Weekly limits.** Some things should not come round twice in one week.
+  Anything with `taco` in its name is capped at once a week — Tacos, Taco salad
+  and Taco soup count as the same thing, and a taco already planned for Tuesday
+  lunch stops another appearing at Friday dinner. The rules are a short list at
+  the top of `lib/store.js` (`WEEKLY_LIMITS`); adding another is one line.
 - **A shopping list.** Everything the planned week needs, grouped, with a count
   where two meals want the same thing. Quantities are not added up: "500g mince"
   and "1 lb mince" cannot be reconciled without a unit parser, and a list that

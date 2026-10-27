@@ -253,6 +253,8 @@ route('POST', /^\/api\/plan\/random$/, async (req, res) => {
         slots,
         overwrite: Boolean(body.overwrite),
         avoidRepeats: body.avoidRepeats !== false,
+        // Default on, so a caller that predates the option behaves as before.
+        includeWeekends: body.includeWeekends !== false,
     });
     savePlan(plan);
 

@@ -25,6 +25,12 @@
     --accent-dim: var(--blue-300);
     --on-accent: #ffffff;
     --danger: #c0372b;
+
+    /* The slot colours, as text. Darker than the dots on purpose: #f59e0b on
+       white is about 2:1, which is a swatch rather than something to read. */
+    --slot-breakfast: #b45309;
+    --slot-lunch: #047857;
+    --slot-dinner: var(--blue-600);
     --shadow: 0 1px 2px rgba(13, 27, 53, 0.06), 0 8px 24px rgba(13, 27, 53, 0.08);
     --radius: 16px;
     --radius-sm: 11px;
@@ -43,6 +49,10 @@
         --accent-dim: #27406e;
         --on-accent: #06142e;
         --danger: #ff6b62;
+        /* And lighter than the dots on a dark panel, for the same reason. */
+        --slot-breakfast: #fbbf24;
+        --slot-lunch: #34d399;
+        --slot-dinner: var(--blue-300);
         --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 10px 30px rgba(0, 0, 0, 0.45);
     }
 }
@@ -391,13 +401,10 @@ main {
     background: var(--panel-2);
     color: var(--muted);
 }
-.pill.breakfast { background: color-mix(in srgb, #f59e0b 18%, transparent); color: #b45309; }
-.pill.lunch { background: color-mix(in srgb, #10b981 18%, transparent); color: #047857; }
-.pill.dinner { background: color-mix(in srgb, var(--blue-400) 20%, transparent); color: var(--blue-600); }
+.pill.breakfast { background: color-mix(in srgb, #f59e0b 18%, transparent); color: var(--slot-breakfast); }
+.pill.lunch { background: color-mix(in srgb, #10b981 18%, transparent); color: var(--slot-lunch); }
+.pill.dinner { background: color-mix(in srgb, var(--blue-400) 20%, transparent); color: var(--slot-dinner); }
 @media (prefers-color-scheme: dark) {
-    .pill.breakfast { color: #fbbf24; }
-    .pill.lunch { color: #34d399; }
-    .pill.dinner { color: var(--blue-300); }
 }
 
 /* ------------------------------------------------------ calendar view ---- */
@@ -449,15 +456,22 @@ main {
 
 .cal-meals { display: flex; flex-direction: column; gap: 2px; min-height: 0; overflow: hidden; }
 .cal-meal { display: flex; align-items: center; gap: 3px; min-width: 0; }
-.cal-meal .dot { width: 5px; height: 5px; border-radius: 50%; flex: 0 0 auto; }
+/* The name carries the colour wherever the name is shown, so the dot beside it
+   would be saying the same thing twice. It comes back on a phone, which is too
+   narrow for names and shows dots alone. */
+.cal-meal .dot { display: none; width: 5px; height: 5px; border-radius: 50%; flex: 0 0 auto; }
 .cal-meal .name {
     font-size: 9.5px;
     line-height: 1.25;
+    font-weight: 560;
     color: var(--text);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
+.cal-meal .name.breakfast { color: var(--slot-breakfast); }
+.cal-meal .name.lunch { color: var(--slot-lunch); }
+.cal-meal .name.dinner { color: var(--slot-dinner); }
 
 .dot.breakfast, .key-dot.breakfast { background: #f59e0b; }
 .dot.lunch, .key-dot.lunch { background: #10b981; }
@@ -477,6 +491,7 @@ main {
    meals of the day are planned, and tapping the date gives the names. */
 @media (max-width: 430px) {
     .cal-meal .name { display: none; }
+    .cal-meal .dot { display: block; }
     .cal-meals { flex-direction: row; gap: 3px; align-items: center; }
     .cal-meal .dot { width: 6px; height: 6px; }
 }

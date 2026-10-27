@@ -426,7 +426,9 @@ function renderCalendar() {
             const dot = document.createElement('span');
             dot.className = `dot ${slot}`;
             const name = document.createElement('span');
-            name.className = 'name';
+            // The slot is on the name, not only on the dot beside it, so the
+            // name itself carries the colour.
+            name.className = `name ${slot}`;
             name.textContent = meal.name;
             row.append(dot, name);
             row.title = `${SLOT_LABELS[slot]}: ${meal.name}`;
@@ -746,6 +748,7 @@ async function runRandom(event) {
                 slots,
                 overwrite: $('rn-overwrite').checked,
                 avoidRepeats: $('rn-norepeat').checked,
+                includeWeekends: $('rn-weekends').checked,
             },
         });
         $('randomer').close();
