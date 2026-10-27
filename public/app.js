@@ -2,8 +2,10 @@
 
 const $ = (id) => document.getElementById(id);
 
-const SLOTS = ['breakfast', 'lunch', 'dinner'];
-const SLOT_LABELS = { breakfast: 'Breakfast', lunch: 'Lunch', dinner: 'Dinner' };
+// One meal of the day. Mirrors SLOTS in lib/store.js; see the note there for
+// why this is still a list.
+const SLOTS = ['dinner'];
+const SLOT_LABELS = { dinner: 'Dinner' };
 
 /*
  * Weeks start on Sunday.
@@ -19,6 +21,10 @@ const state = {
     view: 'plan',
     weekStart: null,
     monthStart: null, // the 1st of the month the calendar is showing
+    // The calendar shows a month or a single week. A week shares weekStart
+    // with the plan, so there is one "this week" in the app rather than two
+    // that can drift apart.
+    calScope: 'month',
     calDays: [], // the month grid's days, as the server has them
     picking: null, // { date, slot } while the picker is open
     editing: null, // the meal being edited, or null for a new one
@@ -111,9 +117,10 @@ const fmtDayShort = (iso) => parseIso(iso).toLocaleDateString(undefined, { day: 
 
 /** What the stepper reads for a view: a month on the calendar, a week elsewhere. */
 function stepperLabel(view) {
-    return view === 'cal'
-        ? state.monthStart.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })
-        : fmtWeekLabel(state.weekStart);
+    if (view !== 'cal') return fmtWeekLabel(state.weekStart);
+    return state.calScope === 'week'
+        ? fmtWeekLabel(state.weekStart)
+        : state.monthStart.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
 }
 
 function fmtWeekLabel(start) {
@@ -219,7 +226,8 @@ function setView(view) {
     const stepped = view !== 'meals';
     $('weeknav').hidden = !stepped;
     $('btn-today').hidden = !stepped;
-    $('btn-today').textContent = view === 'cal' ? 'This month' : 'Today';
+    $('btn-today').textContent =
+        view === 'cal' ? (state.calScope === 'month' ? 'Week view' : 'Month view') : 'Today';
     $('view-title').textContent =
         { plan: 'Plan', cal: 'Calendar', meals: 'Meals', shop: 'Shopping' }[view] ?? 'Plan';
 
@@ -292,10 +300,6 @@ function renderDays() {
             row.dataset.date = day.date;
             row.dataset.slot = slot;
 
-            const label = document.createElement('span');
-            label.className = 'slot-label';
-            label.textContent = SLOT_LABELS[slot];
-
             const value = document.createElement('span');
             value.className = `slot-meal${meal ? '' : ' is-empty'}`;
             value.textContent = meal ? meal.name : 'Nothing planned';
@@ -305,7 +309,7 @@ function renderDays() {
             chev.setAttribute('aria-hidden', 'true');
             chev.textContent = '›';
 
-            row.append(label, value, chev);
+            row.append(value, chev);
             card.append(row);
         }
         host.append(card);
@@ -355,18 +359,7 @@ function renderMeals() {
             main.append(sub);
         }
 
-        const slots = document.createElement('span');
-        slots.className = 'meal-slots';
-        for (const slot of SLOTS) {
-            if (!meal.slots.includes(slot)) continue;
-            const pill = document.createElement('span');
-            pill.className = `pill ${slot}`;
-            pill.textContent = slot.slice(0, 1);
-            pill.title = SLOT_LABELS[slot];
-            slots.append(pill);
-        }
-
-        card.append(main, slots);
+        card.append(main);
         host.append(card);
     }
 }
@@ -392,10 +385,16 @@ function renderWeekdays() {
 }
 
 function renderCalendar() {
-    renderWeekdays();
+    const week = state.calScope === 'week';
     const host = $('cal-grid');
     const today = isoDate(new Date());
     const month = state.monthStart.getMonth();
+
+    // A week names its own days inside each cell, so the strip of initials
+    // above the month would just be repeating itself.
+    $('cal-weekdays').hidden = week;
+    if (!week) renderWeekdays();
+    host.classList.toggle('is-week', week);
 
     host.innerHTML = '';
     for (const day of state.calDays) {
@@ -403,7 +402,7 @@ function renderCalendar() {
         const cell = document.createElement('button');
         cell.type = 'button';
         cell.className = 'cal-day';
-        if (date.getMonth() !== month) cell.classList.add('is-outside');
+        if (!week && date.getMonth() !== month) cell.classList.add('is-outside');
         if (day.date === today) cell.classList.add('is-today');
         cell.dataset.date = day.date;
         cell.setAttribute(
@@ -413,7 +412,11 @@ function renderCalendar() {
 
         const num = document.createElement('span');
         num.className = 'cal-num';
-        num.textContent = String(date.getDate());
+        // A week has room to say which day it is in words; a month cell has
+        // the column heading for that and only room for the number.
+        num.textContent = week
+            ? date.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'short' })
+            : String(date.getDate());
         cell.append(num);
 
         const meals = document.createElement('span');
@@ -434,13 +437,20 @@ function renderCalendar() {
             row.title = `${SLOT_LABELS[slot]}: ${meal.name}`;
             meals.append(row);
         }
+        if (week && !meals.childElementCount) {
+            const none = document.createElement('span');
+            none.className = 'cal-empty';
+            none.textContent = 'Nothing planned';
+            meals.append(none);
+        }
+
         cell.append(meals);
         host.append(cell);
     }
 }
 
 async function loadCalendar() {
-    const dates = monthGrid(state.monthStart);
+    const dates = state.calScope === 'week' ? weekDates(state.weekStart) : monthGrid(state.monthStart);
     const { days } = await api(`/api/plan?from=${dates[0]}&to=${dates[dates.length - 1]}`);
     state.calDays = days;
     $('week-label').textContent = stepperLabel('cal');
@@ -466,9 +476,6 @@ function openDay(date) {
         row.dataset.date = date;
         row.dataset.slot = slot;
 
-        const label = document.createElement('span');
-        label.className = 'slot-label';
-        label.textContent = SLOT_LABELS[slot];
         const value = document.createElement('span');
         value.className = `slot-meal${meal ? '' : ' is-empty'}`;
         value.textContent = meal ? meal.name : 'Nothing planned';
@@ -477,7 +484,7 @@ function openDay(date) {
         chev.setAttribute('aria-hidden', 'true');
         chev.textContent = '\u203a';
 
-        row.append(label, value, chev);
+        row.append(value, chev);
         host.append(row);
     }
     $('day').showModal();
@@ -591,22 +598,21 @@ function toggleTick(text, on) {
 function openPicker(date, slot) {
     state.picking = { date, slot };
     const current = plannedAt(date, slot);
-    $('picker-title').textContent = `${SLOT_LABELS[slot]} · ${fmtDayName(date)}`;
+    $('picker-title').textContent = fmtDayName(date);
     $('picker-search').value = '';
     renderPicker(current);
     $('picker').showModal();
 }
 
 function renderPicker(current) {
-    const { slot } = state.picking;
     const q = $('picker-search').value.trim().toLowerCase();
     const host = $('picker-list');
 
-    // Meals for this slot first, then everything else -- a breakfast is rarely
-    // wanted for dinner, but refusing to offer it would be wrong too.
-    const eligible = state.meals.filter((m) => m.slots.includes(slot));
-    const others = state.meals.filter((m) => !m.slots.includes(slot));
-    const list = [...eligible, ...others].filter((m) => !q || m.name.toLowerCase().includes(q));
+    // Every meal is for the one meal of the day, so there is nothing to sort
+    // into eligible and the rest any more: it is the library, in order.
+    const list = [...state.meals]
+        .sort((a, b) => a.name.localeCompare(b.name))
+        .filter((m) => !q || m.name.toLowerCase().includes(q));
 
     if (!list.length) {
         host.innerHTML = '<p class="hint">No meals match.</p>';
@@ -622,12 +628,7 @@ function renderPicker(current) {
         const name = document.createElement('span');
         name.textContent = meal.name;
         row.append(name);
-        if (!meal.slots.includes(slot)) {
-            const note = document.createElement('span');
-            note.className = 'pill';
-            note.textContent = meal.slots.map((s) => SLOT_LABELS[s]).join(' / ');
-            row.append(note);
-        } else if (meal.id === current) {
+        if (meal.id === current) {
             const tick = document.createElement('span');
             tick.textContent = '✓';
             row.append(tick);
@@ -662,9 +663,6 @@ function openEditor(meal) {
     $('ed-ingredients').value = (meal?.ingredients ?? []).join('\n');
     $('ed-method').value = (meal?.method ?? []).join('\n');
     $('ed-notes').value = meal?.notes ?? '';
-    for (const box of document.querySelectorAll('.ed-slot')) {
-        box.checked = meal ? meal.slots.includes(box.value) : box.value === 'dinner';
-    }
     $('ed-delete').hidden = !meal;
     $('editor').showModal();
 }
@@ -676,7 +674,7 @@ async function saveMeal(event) {
 
     const body = {
         name: $('ed-name').value,
-        slots: [...document.querySelectorAll('.ed-slot')].filter((b) => b.checked).map((b) => b.value),
+        slots: SLOTS,
         serves: $('ed-serves').value,
         tags: $('ed-tags').value,
         ingredients: $('ed-ingredients').value,
@@ -731,13 +729,7 @@ function openRandomer() {
 
 async function runRandom(event) {
     event.preventDefault();
-    const slots = [...document.querySelectorAll('.rn-slot')].filter((b) => b.checked).map((b) => b.value);
     const err = $('randomer-error');
-    if (!slots.length) {
-        err.textContent = 'Choose at least one of breakfast, lunch or dinner.';
-        err.hidden = false;
-        return;
-    }
     const dates = weekDates(state.weekStart);
     try {
         const out = await api('/api/plan/random', {
@@ -745,7 +737,7 @@ async function runRandom(event) {
             body: {
                 from: dates[0],
                 to: dates[6],
-                slots,
+                slots: SLOTS,
                 overwrite: $('rn-overwrite').checked,
                 avoidRepeats: $('rn-norepeat').checked,
                 includeWeekends: $('rn-weekends').checked,
@@ -789,6 +781,13 @@ async function clearWeek() {
 /** Steps whichever period the current view is showing. */
 function step(dir) {
     if (state.view === 'cal') {
+        if (state.calScope === 'week') {
+            const nextWeek = new Date(state.weekStart);
+            nextWeek.setDate(nextWeek.getDate() + dir * 7);
+            state.weekStart = nextWeek;
+            loadCalendar().catch((e) => toast(e.message));
+            return;
+        }
         const next = new Date(state.monthStart);
         // Set the day first: stepping from the 31st into a 30-day month would
         // otherwise roll over into the one after it.
@@ -814,7 +813,13 @@ $('week-prev').addEventListener('click', () => step(-1));
 $('week-next').addEventListener('click', () => step(1));
 $('btn-today').addEventListener('click', () => {
     if (state.view === 'cal') {
+        // Switches between the month and a single week, and lands on the
+        // current one either way -- so it doubles as the way back to today
+        // after stepping off into March.
+        state.calScope = state.calScope === 'month' ? 'week' : 'month';
         state.monthStart = monthStart(new Date());
+        state.weekStart = weekStart(new Date());
+        $('btn-today').textContent = state.calScope === 'month' ? 'Week view' : 'Month view';
         loadCalendar().catch((e) => toast(e.message));
         return;
     }

@@ -219,7 +219,7 @@ route('PUT', /^\/api\/plan$/, async (req, res) => {
     const body = await readBody(req);
     const { date, slot } = body;
     if (!isIsoDate(date)) return fail(res, 400, 'That is not a date this app understands.');
-    if (!SLOTS.includes(slot)) return fail(res, 400, 'That is not one of breakfast, lunch or dinner.');
+    if (!SLOTS.includes(slot)) return fail(res, 400, `That is not a meal of the day this plans (${SLOTS.join(', ')}).`);
 
     const mealId = body.mealId ? String(body.mealId) : null;
     if (mealId && !loadMeals().some((m) => m.id === mealId)) {
@@ -242,7 +242,7 @@ route('POST', /^\/api\/plan\/random$/, async (req, res) => {
     if (!dates.length) return fail(res, 400, 'That range runs backwards.');
 
     const slots = Array.isArray(body.slots) ? body.slots.filter((s) => SLOTS.includes(s)) : ['dinner'];
-    if (!slots.length) return fail(res, 400, 'Choose at least one of breakfast, lunch or dinner.');
+    if (!slots.length) return fail(res, 400, 'Nothing to fill: no meal of the day was asked for.');
 
     const meals = loadMeals();
     if (!meals.length) return fail(res, 400, 'Add some meals first -- there is nothing to choose from.');

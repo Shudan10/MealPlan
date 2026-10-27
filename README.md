@@ -1,35 +1,33 @@
 # Meal Plan
 
 A family meal planner for [Quick Start Home](https://github.com/Shudan10/Home). Keep
-the meals your family actually eats, plan a week of breakfast, lunch and dinner
-from them — or let it pick at random — and get the shopping list that falls out
-of it.
+the meals your family actually eats, plan a week of dinners from them — or let
+it pick at random — and get the shopping list that falls out of it.
 
 Built to be used on a phone, standing in a kitchen.
 
 ## What it does
 
-- **A meal library.** Name, which meals of the day it suits, tags, how many it
-  serves, ingredients and method. Only the name is required, so adding "Tacos"
-  takes three seconds and the recipe can be filled in later.
-- **A week at a time.** Each day shows breakfast, lunch and dinner. Tap a slot,
-  pick a meal.
-- **Random week.** Fills the slots you choose. It draws without replacement, so
+- **A meal library.** Name, tags, how many it serves, ingredients and method.
+  Only the name is required, so adding "Tacos" takes three seconds and the
+  recipe can be filled in later.
+- **A week at a time.** One meal a day — dinner, which is the one that gets
+  planned. Tap a day, pick a meal.
+- **A month, or a week.** The calendar shows the shape of a month at a glance,
+  and switches to a single week where the names are big enough to read from
+  across the kitchen. The button in the header swaps between them and lands on
+  the current month or week either way.
+- **Random week.** Fills the days. It draws without replacement, so
   a week does not come back as the same dinner four times, and by default it
   only fills blanks — if you have already decided on Friday, Friday is kept.
   Saturday and Sunday can be left out, for households that eat differently at
   the weekend.
 - **Weekly limits.** Some things should not come round twice in one week.
-  Anything with `taco` in its name is capped at once a week — Tacos, Taco salad
-  and Taco soup count as the same thing, and a taco already planned for Tuesday
-  lunch stops another appearing at Friday dinner. The rules are a short list at
-  the top of `lib/store.js` (`WEEKLY_LIMITS`); adding another is one line.
-- **A shopping list.** Everything the planned week needs, grouped, with a count
-  where two meals want the same thing. Quantities are not added up: "500g mince"
-  and "1 lb mince" cannot be reconciled without a unit parser, and a list that
-  quietly gets the amounts wrong is worse than one that shows both lines.
-- **Installs to the home screen.** It is a PWA, so Add to Home Screen gives it
-  an icon and no browser chrome.
+  Anything with `taco` in its name is capped at once a week, and the whole
+  family counts as one thing: Chicken tacos, Beef tacos and Taco salad are
+  different meats, but they are still tacos, and one of them on Tuesday stops
+  another appearing on Friday. The rules are a short list at the top of
+  `lib/store.js` (`WEEKLY_LIMITS`); adding another is one line.
 
 ## Running it
 

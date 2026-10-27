@@ -26,11 +26,10 @@
     --on-accent: #ffffff;
     --danger: #c0372b;
 
-    /* The slot colours, as text. Darker than the dots on purpose: #f59e0b on
-       white is about 2:1, which is a swatch rather than something to read. */
-    --slot-breakfast: #b45309;
-    --slot-lunch: #047857;
+    /* The meal name's colour. Darker than the dot it replaced: the dot blue on
+       white is about 3:1, which is fine for a shape and not for words. */
     --slot-dinner: var(--blue-600);
+
     --shadow: 0 1px 2px rgba(13, 27, 53, 0.06), 0 8px 24px rgba(13, 27, 53, 0.08);
     --radius: 16px;
     --radius-sm: 11px;
@@ -49,9 +48,7 @@
         --accent-dim: #27406e;
         --on-accent: #06142e;
         --danger: #ff6b62;
-        /* And lighter than the dots on a dark panel, for the same reason. */
-        --slot-breakfast: #fbbf24;
-        --slot-lunch: #34d399;
+        /* And lighter, on a dark panel, for the same reason. */
         --slot-dinner: var(--blue-300);
         --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 10px 30px rgba(0, 0, 0, 0.45);
     }
@@ -211,27 +208,6 @@ label.check input { width: auto; margin: 0; }
 .row { display: flex; gap: 10px; }
 .row > label { flex: 1; }
 
-/* Slot chips: a checkbox that reads as a pill rather than a tick box. */
-.slots { border: 0; padding: 0; margin: 0 0 14px; display: flex; flex-wrap: wrap; gap: 8px; }
-.slots legend { color: var(--muted); font-size: 13px; font-weight: 560; padding: 0 0 7px; }
-.chip { margin: 0; }
-.chip input { position: absolute; opacity: 0; pointer-events: none; }
-.chip span {
-    display: inline-block;
-    padding: 8px 14px;
-    border: 1px solid var(--line);
-    border-radius: 999px;
-    background: var(--panel);
-    color: var(--muted);
-    font-size: 14px;
-}
-.chip input:checked + span {
-    background: var(--accent);
-    border-color: var(--accent);
-    color: var(--on-accent);
-}
-.chip input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
-
 /* ------------------------------------------------------------- sign in --- */
 
 .gate {
@@ -358,16 +334,7 @@ main {
     min-height: 52px;
 }
 .slot-row:first-of-type { border-top: 0; }
-.slot-row:active { background: var(--panel-2); transform: none; }
-.slot-label {
-    flex: 0 0 74px;
-    color: var(--muted);
-    font-size: 12px;
-    font-weight: 650;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-}
-.slot-meal { flex: 1; font-weight: 560; }
+.slot-row:active { background: var(--panel-2); transform: none; }.slot-meal { flex: 1; font-weight: 560; }
 .slot-meal.is-empty { color: var(--muted); font-weight: 450; }
 .slot-chevron { color: var(--accent-dim); font-size: 18px; }
 
@@ -389,22 +356,7 @@ main {
 }
 .meal-main { flex: 1; min-width: 0; }
 .meal-name { font-weight: 600; }
-.meal-sub { color: var(--muted); font-size: 12.5px; margin-top: 2px; }
-.meal-slots { display: flex; gap: 4px; flex-shrink: 0; }
-.pill {
-    font-size: 10.5px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    padding: 3px 7px;
-    border-radius: 999px;
-    background: var(--panel-2);
-    color: var(--muted);
-}
-.pill.breakfast { background: color-mix(in srgb, #f59e0b 18%, transparent); color: var(--slot-breakfast); }
-.pill.lunch { background: color-mix(in srgb, #10b981 18%, transparent); color: var(--slot-lunch); }
-.pill.dinner { background: color-mix(in srgb, var(--blue-400) 20%, transparent); color: var(--slot-dinner); }
-@media (prefers-color-scheme: dark) {
+.meal-sub { color: var(--muted); font-size: 12.5px; margin-top: 2px; }@media (prefers-color-scheme: dark) {
 }
 
 /* ------------------------------------------------------ calendar view ---- */
@@ -469,23 +421,9 @@ main {
     text-overflow: ellipsis;
     white-space: nowrap;
 }
-.cal-meal .name.breakfast { color: var(--slot-breakfast); }
-.cal-meal .name.lunch { color: var(--slot-lunch); }
 .cal-meal .name.dinner { color: var(--slot-dinner); }
 
-.dot.breakfast, .key-dot.breakfast { background: #f59e0b; }
-.dot.lunch, .key-dot.lunch { background: #10b981; }
-.dot.dinner, .key-dot.dinner { background: var(--blue-400); }
-
-.cal-key { display: flex; align-items: center; gap: 14px; margin-top: 12px; flex-wrap: wrap; }
-.key-item { display: inline-flex; align-items: center; gap: 6px; }
-.key-dot {
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
-    display: inline-block;
-    flex: 0 0 auto;
-}
+.dot.dinner { background: var(--blue-400); }
 
 /* Phones are too narrow for a name inside a 48px cell: the dots alone say which
    meals of the day are planned, and tapping the date gives the names. */
@@ -512,7 +450,6 @@ main {
 }
 .day-slot:first-child { border-top: 0; }
 .day-slot:active { background: var(--panel-2); transform: none; }
-.day-slot .slot-label { flex: 0 0 74px; }
 .day-slot .slot-meal { flex: 1; font-weight: 560; }
 .day-slot .slot-meal.is-empty { color: var(--muted); font-weight: 450; }
 
@@ -689,6 +626,10 @@ dialog::backdrop { background: rgba(4, 10, 24, 0.55); backdrop-filter: blur(3px)
         width: 210px;
         height: 100dvh;
         flex-direction: column;
+        /* Centred down the column rather than stacked at the top: four items
+           against the ceiling of a 820px rail leaves the eye travelling to a
+           corner, and the thumb reaching past three quarters of the screen. */
+        justify-content: center;
         gap: 4px;
         padding: 20px 12px calc(16px + env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
         border-top: 0;
@@ -735,38 +676,16 @@ dialog::backdrop { background: rgba(4, 10, 24, 0.55); backdrop-filter: blur(3px)
        a footnote underneath that scrolls away. */
     #view-cal {
         display: grid;
-        grid-template-columns: 138px minmax(0, 1fr);
-        grid-template-areas:
-            "key weekdays"
-            "key grid";
-        column-gap: 18px;
-        align-items: start;
-        /* The weekday strip takes what it needs; the month takes the rest of
-           the screen. A month with six rows and one with five then both fill
-           it, instead of five rows leaving a third of the screen empty. */
+        /* One column now the key has gone: the weekday strip takes what it
+           needs and the month takes the rest of the screen, so a five-row
+           month and a six-row one both fill it. */
         grid-template-rows: auto minmax(0, 1fr);
         min-height: 100%;
     }
-    #cal-weekdays { grid-area: weekdays; }
-    /* align-items: start above keeps the key a compact card at the top of its
-       column; the month has to opt back in to filling its row. */
-    #cal-grid { grid-area: grid; align-self: stretch; }
-    .cal-key {
-        grid-area: key;
-        position: sticky;
-        top: 14px;
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 12px;
-        margin: 0;
-        padding: 15px 16px;
-        background: var(--panel);
-        border: 1px solid var(--line);
-        border-radius: var(--radius);
-        box-shadow: var(--shadow);
-        font-size: 13.5px;
-    }
-    .cal-key .key-dot { width: 9px; height: 9px; }
+    /* Placed in the second row explicitly, not left to auto-placement: the
+       week view hides the weekday strip, and an auto-placed grid then slides
+       up into the `auto` row and collapses to the height of its contents. */
+    #cal-grid { grid-row: 2; align-self: stretch; }
 
     /* Wider than tall here: six rows of a square cell do not fit in 820px of
        landscape, and the cells only need enough height for three meal names. */
@@ -820,4 +739,71 @@ dialog::backdrop { background: rgba(4, 10, 24, 0.55); backdrop-filter: blur(3px)
 @media (min-width: 1280px) {
     #days, #meal-list { grid-template-columns: repeat(3, minmax(0, 1fr)); }
     main { padding-inline: 32px; }
+}
+
+/* ------------------------------------------------- the calendar as a week -- */
+/* The month answers "what is the shape of October"; this answers "what are we
+   eating this week", which wants the name big enough to read across a kitchen
+   rather than squeezed into a seventh of the width. */
+
+.cal-grid.is-week {
+    grid-template-columns: minmax(0, 1fr);
+    grid-auto-rows: minmax(58px, auto);
+    gap: 8px;
+}
+.cal-grid.is-week .cal-day {
+    flex-direction: row;
+    align-items: center;
+    gap: 14px;
+    aspect-ratio: auto;
+    padding: 12px 14px;
+}
+.cal-grid.is-week .cal-num {
+    flex: 0 0 42%;
+    font-size: 14px;
+    font-weight: 650;
+    color: var(--text);
+}
+.cal-grid.is-week .cal-day.is-today .cal-num { color: var(--accent); }
+.cal-grid.is-week .cal-meals { flex: 1; min-width: 0; }
+.cal-grid.is-week .cal-meal .name {
+    /* Shown even on a phone. A month cell there is 48px wide and falls back to
+       dots, and that rule was swallowing the week view too -- which exists for
+       no reason other than reading the name. */
+    display: block;
+    font-size: 16px;
+    font-weight: 600;
+    /* Read, not truncated: this is the view whose whole job is the name. */
+    white-space: normal;
+    overflow: visible;
+}
+/* And the dot goes again, since the name is back to carrying the colour. */
+.cal-grid.is-week .cal-meal .dot { display: none; }
+.cal-empty { font-size: 13px; color: var(--muted); }
+
+@media (min-width: 900px) {
+    /* Seven columns down the screen, like a planner pinned to the wall. */
+    .cal-grid.is-week {
+        grid-template-columns: repeat(7, minmax(0, 1fr));
+        grid-auto-rows: minmax(0, 1fr);
+        gap: 10px;
+    }
+    .cal-grid.is-week .cal-day {
+        flex-direction: column;
+        align-items: stretch;
+        justify-content: flex-start;
+        gap: 10px;
+        padding: 14px 12px;
+    }
+    .cal-grid.is-week .cal-num { flex: 0 0 auto; font-size: 13.5px; }
+    .cal-grid.is-week .cal-meal .name { font-size: 17px; line-height: 1.35; }
+    .cal-grid.is-week .cal-meal { align-items: flex-start; }
+    /* The date sits at the top of the column; one meal then centres in what is
+       left, rather than hanging under the heading with 400px of nothing below
+       it. */
+    .cal-grid.is-week .cal-meals {
+        flex: 1;
+        justify-content: center;
+        padding-bottom: 8%;
+    }
 }
