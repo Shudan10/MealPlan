@@ -220,16 +220,18 @@ function setView(view) {
     $('view-cal').hidden = view !== 'cal';
     $('view-meals').hidden = view !== 'meals';
     $('view-shop').hidden = view !== 'shop';
+    $('view-themes').hidden = view !== 'themes';
 
     // The stepper steps by a week on the plan and the shopping list, and by a
-    // month on the calendar. Only the meal library has nothing to step through.
-    const stepped = view !== 'meals';
+    // month on the calendar. The meal library and the themes have nothing to
+    // step through.
+    const stepped = view !== 'meals' && view !== 'themes';
     $('weeknav').hidden = !stepped;
     $('btn-today').hidden = !stepped;
     $('btn-today').textContent =
         view === 'cal' ? (state.calScope === 'month' ? 'Week view' : 'Month view') : 'Today';
     $('view-title').textContent =
-        { plan: 'Plan', cal: 'Calendar', meals: 'Meals', shop: 'Shopping' }[view] ?? 'Plan';
+        { plan: 'Plan', cal: 'Calendar', meals: 'Meals', shop: 'Shopping', themes: 'Themes' }[view] ?? 'Plan';
 
     /*
      * The label is set here, not only by whichever loader runs.
@@ -242,6 +244,7 @@ function setView(view) {
     if (stepped) $('week-label').textContent = stepperLabel(view);
 
     if (view === 'shop') loadShopping();
+    if (view === 'themes') renderThemes();
     if (view === 'cal') loadCalendar().catch((e) => toast(e.message));
     // Coming back to the plan from the calendar, where a day may have been
     // changed: the week on screen could be out of date.
@@ -776,6 +779,98 @@ async function clearWeek() {
     }
 }
 
+// --------------------------------------------------------------- themes ----
+
+/*
+ * One card per theme, drawn from the same table that applies them.
+ *
+ * Each card is a small mock of the app in that theme -- a page, a card on it
+ * with a meal name, and a button -- rather than a row of swatches. Five hex
+ * colours side by side do not tell anybody what the Plan tab will look like;
+ * a miniature of the Plan tab does.
+ */
+function themeCard(theme, active) {
+    const t = theme.t;
+    const card = document.createElement('button');
+    card.type = 'button';
+    card.className = `theme-card${active ? ' is-active' : ''}`;
+    card.dataset.theme = theme.id;
+    card.setAttribute('aria-pressed', String(active));
+
+    const preview = document.createElement('span');
+    preview.className = 'theme-preview';
+    preview.style.background = `${t.grad}, ${t.bg}`;
+    preview.style.borderColor = t.line;
+
+    const panel = document.createElement('span');
+    panel.className = 'tp-panel';
+    panel.style.background = t.panel;
+    panel.style.borderColor = t.line;
+    const day = document.createElement('span');
+    day.className = 'tp-day';
+    day.style.color = t.muted;
+    day.textContent = 'Friday';
+    const meal = document.createElement('span');
+    meal.className = 'tp-meal';
+    meal.style.color = t.dinner;
+    meal.textContent = 'Tacos';
+    panel.append(day, meal);
+
+    const button = document.createElement('span');
+    button.className = 'tp-button';
+    button.style.background = `linear-gradient(180deg, ${t.btnTop}, ${t.btnBottom})`;
+    button.style.color = t.onPrimary;
+    button.textContent = 'Random';
+
+    preview.append(panel, button);
+    if (theme.mark) {
+        const mark = document.createElement('span');
+        mark.className = 'tp-mark';
+        mark.setAttribute('aria-hidden', 'true');
+        mark.textContent = theme.mark;
+        preview.append(mark);
+    }
+
+    const label = document.createElement('span');
+    label.className = 'theme-label';
+    const name = document.createElement('span');
+    name.className = 'theme-name';
+    name.textContent = theme.motif ? `${theme.motif} ${theme.name}` : theme.name;
+    label.append(name);
+    if (theme.note) {
+        const note = document.createElement('span');
+        note.className = 'theme-note';
+        note.textContent = theme.note;
+        label.append(note);
+    }
+
+    card.append(preview, label);
+    return card;
+}
+
+function renderThemes() {
+    const current = readSavedTheme();
+    for (const group of ['colour', 'holiday']) {
+        const host = $(`theme-grid-${group}`);
+        host.innerHTML = '';
+        for (const theme of THEMES.filter((x) => x.group === group)) {
+            host.append(themeCard(theme, theme.id === current));
+        }
+    }
+}
+
+function chooseTheme(id) {
+    const theme = applyTheme(id);
+    saveTheme(theme.id);
+    // Only the pressed state changes; redrawing the cards would reset the
+    // scroll position of a page that is mostly cards.
+    for (const card of document.querySelectorAll('.theme-card')) {
+        const on = card.dataset.theme === theme.id;
+        card.classList.toggle('is-active', on);
+        card.setAttribute('aria-pressed', String(on));
+    }
+}
+
 // --------------------------------------------------------------- wiring ----
 
 /** Steps whichever period the current view is showing. */
@@ -856,6 +951,11 @@ $('day-slots').addEventListener('click', (e) => {
 $('day-close').addEventListener('click', () => $('day').close());
 
 $('meal-search').addEventListener('input', renderMeals);
+
+$('view-themes').addEventListener('click', (e) => {
+    const card = e.target.closest('.theme-card');
+    if (card) chooseTheme(card.dataset.theme);
+});
 $('btn-add-meal').addEventListener('click', () => openEditor(null));
 
 $('picker-list').addEventListener('click', (e) => {

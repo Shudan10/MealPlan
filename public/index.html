@@ -19,6 +19,11 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Meal Plan">
 <meta name="theme-color" content="#0b1b3a">
+
+<!-- Last in the head, and not deferred: it puts the saved theme on the page
+     before anything is drawn, and it needs the theme-color tag above to exist
+     so the status bar can follow. -->
+<script src="themes.js"></script>
 </head>
 <body>
 
@@ -95,6 +100,20 @@
       <p class="hint" id="shop-hint"></p>
       <div id="shop-list"></div>
     </section>
+
+    <!-- ----------------------------------------------------- themes view -->
+    <section id="view-themes" class="view" hidden>
+      <p class="hint">
+        Changes the whole app straight away. Saved on this device, so each
+        phone or iPad in the house can have its own.
+      </p>
+
+      <h2 class="theme-group-title">Colours</h2>
+      <div class="theme-grid" id="theme-grid-colour"></div>
+
+      <h2 class="theme-group-title">Holidays</h2>
+      <div class="theme-grid" id="theme-grid-holiday"></div>
+    </section>
   </main>
 
   </div><!-- /.content -->
@@ -113,6 +132,9 @@
     </button>
     <button class="tab" data-view="shop">
       <svg class="tab-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5.5 8h13l-1.2 11.2a2 2 0 0 1-2 1.8H8.7a2 2 0 0 1-2-1.8z"/><path d="M9 8V5.5a3 3 0 0 1 6 0V8"/></svg><span>Shopping</span>
+    </button>
+    <button class="tab" data-view="themes">
+      <svg class="tab-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18c1.2 0 1.8-.8 1.8-1.7 0-.5-.2-.9-.5-1.2-.3-.3-.5-.7-.5-1.2 0-1 .8-1.7 1.8-1.7H17a4 4 0 0 0 4-4c0-4.4-4-8.2-9-8.2z"/><circle cx="7.5" cy="11.5" r="1.2"/><circle cx="10.5" cy="7.5" r="1.2"/><circle cx="15" cy="7.5" r="1.2"/></svg><span>Themes</span>
     </button>
   </nav>
 </div>

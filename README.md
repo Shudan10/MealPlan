@@ -28,6 +28,18 @@ Built to be used on a phone, standing in a kitchen.
   different meats, but they are still tacos, and one of them on Tuesday stops
   another appearing on Friday. The rules are a short list at the top of
   `lib/store.js` (`WEEKLY_LIMITS`); adding another is one line.
+- **A shopping list.** Everything the planned week needs, grouped, with a count
+  where two meals want the same thing. Quantities are not added up: "500g mince"
+  and "1 lb mince" cannot be reconciled without a unit parser, and a list that
+  quietly gets the amounts wrong is worse than one that shows both lines.
+- **Themes.** Colours — Blue, Black, White, Red, Green, Purple, Orange, Pink
+  and Teal — and holidays from New Year's round to Christmas, each with its own
+  palette and a small mark of the season. Blue, the default, follows the
+  device's light or dark setting; the rest choose for themselves. Saved per
+  device, so each phone or iPad in the house can have its own. All of them are
+  described in one place, `public/themes.js`.
+- **Installs to the home screen.** It is a PWA, so Add to Home Screen gives it
+  an icon and no browser chrome.
 
 ## Running it
 

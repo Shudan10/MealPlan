@@ -30,6 +30,19 @@
        white is about 3:1, which is fine for a shape and not for words. */
     --slot-dinner: var(--blue-600);
 
+    /* Everything a theme can change and the stylesheet used to hard-code: the
+       primary button's gradient and its text, the glow under it, the dot in a
+       phone's month cell, and the tick in a checked box. The defaults are the
+       blue the app has always been, so with no theme chosen nothing moves. */
+    /* blue-500 rather than the 400 this used to be: white on #3b82f6 is
+       3.7:1, under the 4.5 that text this size needs. One shade deeper at the
+       top of the gradient, and nothing else about the button moves. */
+    --btn-top: var(--blue-500);
+    --btn-bottom: var(--blue-600);
+    --on-primary: #ffffff;
+    --glow: rgba(37, 99, 235, 0.3);
+    --dot-dinner: var(--blue-400);
+
     --shadow: 0 1px 2px rgba(13, 27, 53, 0.06), 0 8px 24px rgba(13, 27, 53, 0.08);
     --radius: 16px;
     --radius-sm: 11px;
@@ -46,7 +59,7 @@
         --muted: #91a4c8;
         --accent: var(--blue-400);
         --accent-dim: #27406e;
-        --on-accent: #06142e;
+        --on-accent: #ffffff;
         --danger: #ff6b62;
         /* And lighter, on a dark panel, for the same reason. */
         --slot-dinner: var(--blue-300);
@@ -114,10 +127,10 @@ button:active:not(:disabled) { transform: scale(0.97); }
 button:disabled { opacity: 0.45; cursor: not-allowed; }
 
 button.primary {
-    background: linear-gradient(180deg, var(--blue-400), var(--blue-600));
-    border-color: var(--blue-600);
-    color: #fff;
-    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.2) inset, 0 6px 16px rgba(37, 99, 235, 0.3);
+    background: linear-gradient(180deg, var(--btn-top), var(--btn-bottom));
+    border-color: var(--btn-bottom);
+    color: var(--on-primary);
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.2) inset, 0 6px 16px var(--glow);
 }
 button.ghost { background: transparent; }
 button.danger, button.ghost.danger { color: var(--danger); border-color: transparent; }
@@ -188,7 +201,9 @@ input[type="radio"]::before {
     height: 12px;
     transform: scale(0);
     transition: transform 0.14s cubic-bezier(0.3, 1.4, 0.6, 1);
-    background: #fff;
+    /* On the accent, so it follows whatever the accent is: a white tick
+       vanishes into the silver of the Black theme. */
+    background: var(--on-accent);
     clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 85% 0%, 46% 70%);
 }
 input[type="radio"]::before { clip-path: none; border-radius: 50%; width: 9px; height: 9px; }
@@ -234,7 +249,7 @@ label.check input { width: auto; margin: 0; }
     margin: 0 auto 14px;
     display: block;
     border-radius: 16px;
-    box-shadow: 0 8px 20px rgba(37, 99, 235, 0.35);
+    box-shadow: 0 8px 20px var(--glow);
 }
 
 /* ------------------------------------------------------------- chrome ---- */
@@ -423,7 +438,7 @@ main {
 }
 .cal-meal .name.dinner { color: var(--slot-dinner); }
 
-.dot.dinner { background: var(--blue-400); }
+.dot.dinner { background: var(--dot-dinner); }
 
 /* Phones are too narrow for a name inside a 48px cell: the dots alone say which
    meals of the day are planned, and tapping the date gives the names. */
@@ -806,4 +821,117 @@ dialog::backdrop { background: rgba(4, 10, 24, 0.55); backdrop-filter: blur(3px)
         justify-content: center;
         padding-bottom: 8%;
     }
+}
+
+/* --------------------------------------------------------------- themes -- */
+
+/* A holiday's motif beside the page title, and a large faint mark in the
+   corner. Both come from custom properties a theme sets and every other theme
+   clears, so there is nothing to undo when switching back to plain Blue. */
+#view-title::after {
+    content: var(--theme-motif, none);
+    margin-left: 0.4em;
+    font-size: 0.82em;
+}
+body::after {
+    content: var(--theme-mark, none);
+    position: fixed;
+    right: max(20px, env(safe-area-inset-right));
+    bottom: calc(92px + env(safe-area-inset-bottom));
+    font-size: 150px;
+    line-height: 1;
+    opacity: 0.07;
+    pointer-events: none;
+    /* Behind the cards rather than over them: it shows in the gaps, and never
+       sits on top of a meal name someone is trying to read. */
+    z-index: -1;
+}
+@media (min-width: 900px) {
+    body::after { bottom: 28px; right: 36px; font-size: 230px; }
+}
+
+.theme-group-title {
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 22px 0 10px;
+}
+.theme-group-title:first-of-type { margin-top: 6px; }
+
+.theme-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+@media (min-width: 900px) {
+    .theme-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+}
+@media (min-width: 1280px) {
+    .theme-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+
+.theme-card {
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+    padding: 8px 8px 11px;
+    text-align: left;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    min-height: 0;
+}
+.theme-card.is-active {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px var(--accent), var(--shadow);
+}
+
+/* The miniature: always drawn in the card's own theme, whatever the app is
+   in, which is why its colours are set inline rather than from the tokens. */
+.theme-preview {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    height: 92px;
+    padding: 10px;
+    border: 1px solid transparent;
+    border-radius: 11px;
+    overflow: hidden;
+}
+.tp-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    padding: 6px 8px;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    width: 72%;
+}
+.tp-day { font-size: 9.5px; font-weight: 650; }
+.tp-meal { font-size: 13px; font-weight: 700; }
+.tp-button {
+    align-self: flex-start;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 4px 9px;
+    border-radius: 7px;
+}
+.tp-mark {
+    position: absolute;
+    right: 8px;
+    bottom: 4px;
+    font-size: 30px;
+    line-height: 1;
+}
+
+.theme-label { display: flex; flex-direction: column; gap: 2px; padding: 0 4px; }
+.theme-name { font-weight: 650; font-size: 14.5px; }
+.theme-note { font-size: 12px; color: var(--muted); }
+.theme-card.is-active .theme-name::after {
+    content: '  ✓';
+    color: var(--accent);
 }
